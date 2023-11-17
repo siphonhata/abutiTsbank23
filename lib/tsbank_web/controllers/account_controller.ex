@@ -16,21 +16,29 @@ defmodule TsbankWeb.AccountController do
   def create(conn, %{"account" => account_params}) do
 
     cust_id = Guardian.get_me_id(conn.assigns.user.user_id)
-    custom = Users.get_customer_user(cust_id)
-
+    custom = Users.get_customer_user(cust_id) #returns a customer
+    accounts = Accounts.get_customer_accounts_by_id(cust_id)
+    IO.inspect(accounts)
+    accounts_as_maps = Enum.map(accounts, &Map.from_struct/1)
+    types_list = Enum.map(accounts_as_maps, &(&1.type))
     target_value = Map.get(account_params, "type")
-
-    account_types = ["savings", "cheque", "fixed"]
-    Enum.each(account_types, fn val ->
-      if val == target_value do
-        account_params = Map.put(account_params, "dateOpened", DateTime.utc_now)
-        with {:ok, %Account{} = account} <- Accounts.create_account(custom, account_params) do
-          conn
-            |> put_status(:created)
-            |> render(:show, account: account)
-        end
+    Enum.each(types_list, fn vall ->
+      if vall == target_value do
+        raise ErrorResponse.Unauthorized, message: "Account Type Exists"
       else
-        raise ErrorResponse.Unauthorized, message: "Invalid Account Type"
+        account_types = ["fixed", "savings", "cheque"]
+        Enum.each(account_types, fn val ->
+          if val == target_value do
+            account_params = Map.put(account_params, "dateOpened", DateTime.utc_now)
+            with {:ok, %Account{} = account} <- Accounts.create_account(custom, account_params) do
+              conn
+                |> put_status(:created)
+                |> render(:show, account: account)
+            end
+          else
+            raise ErrorResponse.Unauthorized, message: "Invalid Account Type"
+          end
+        end)
       end
     end)
 
@@ -58,10 +66,18 @@ defmodule TsbankWeb.AccountController do
 
   def customerAccounts(conn, %{"customer_id" => customer_id}) do
     accounts = Accounts.get_customer_accounts_by_id(customer_id)
+    # IO.puts "========================="
+    # IO.inspect(accounts)
+    # IO.puts "+++++++++++++++++++++++++++++"
+    # # accounts_as_maps = Enum.map(accounts, &Map.from_struct/1)
+    # # types_list = Enum.map(accounts_as_maps, &(&1.type))
+    # #acc_map = Map.from_struct(accounts)
+    # IO.inspect(types_list)
+    # #IO.inspect(Map.from_struct(accounts))
+    # IO.puts "+++++++++++++++++++++++++++++"
     render(conn, :showAccounts, accounts: accounts)
 
   end
-
 
   def view_one_account(conn, %{"account_id" => account_id}) do
     account = Accounts.get_single_account(account_id)

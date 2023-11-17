@@ -114,7 +114,14 @@ defmodule Tsbank.Accounts do
     Account
     |> where(customer_id: ^customer_id)
     |> preload([:customer])
-    |> Repo.one()
+    |> Repo.all()
+  end
+
+  def get_customer_accounts_by_id1(customer_id) do
+    Account
+    |> where(customer_id: ^customer_id)
+    |> preload([:customer])
+    |> Repo.all()
   end
 
   def get_single_account(id) do

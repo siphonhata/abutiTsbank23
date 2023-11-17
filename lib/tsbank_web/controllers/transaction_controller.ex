@@ -77,22 +77,18 @@ defmodule TsbankWeb.TransactionController do
   end
 
   def transfer(conn, %{"bank_name" => bank_name, "amount" => amount, "destination_account_num" => destination_account_num}) do
-    # Perform the transfer logic, update balances, etc.
-    # This could include making changes to your local database.
-    # Notify the receiver (Project B) about the transfer
 
     id = get_session(conn, :user_id)
-    #IO.inspect(id)
     customer = Guardian.get_me_id(id)
     account = Accounts.get_customer_accounts_by_id(customer)
     account_map = Map.from_struct(account)
-    # #
-    IO.inspect(account_map)
-    accbalance = Map.get(account_map, :balance)
-    IO.inspect(accbalance)
-    if accbalance >= amount do
+
+
+
+    if Map.get(account_map, :balance) >= amount do
       Accounts.update_account(%Account{} = account, %{balance: account.balance - amount})
-      send_notification_to_project_b(bank_name, destination_account_num, amount)
+      sender_details = %{sender_bank_name: "sipho", sender_account_num: Map.get(account_map, :accountNumber)}
+      send_notification_to_project_b(bank_name, sender_details, destination_account_num, amount)
       conn
         |> put_status(:ok)
         |> json(%{message: "Transfer successful"})
@@ -103,31 +99,33 @@ defmodule TsbankWeb.TransactionController do
     end
   end
 
-  defp send_notification_to_project_b(bank_name, destination_account_num, amount) do
+  defp send_notification_to_project_b(bank_name, sender_details, destination_account_num, amount) do
     # Use HTTPoison or another HTTP client to make a POST request to Project B
-
+    # sender_bank_name = Map.get(sender_details, sender_bank_name)
+    # sender_acc_num = Map.get(sender_details, sender_account_num)
+    IO.inspect(sender_details)
     case bank_name do
       "hata" ->
-        url = "http://192.168.1.222:4003/api/notify_transfer"
+        url = "http://192.168.1.222:4003/api/v1/notify_transfer"
         body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
         HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
 
       "kevin" ->
-        url = "http://192.168.1.222:4005/api/notify_transfer"
+        url = "http://192.168.1.222:4005/api/v1notify_transfer"
         body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
         HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
 
       "sami" ->
-        url = "http://192.168.1.222:4006/api/notify_transfer"
+        url = "http://192.168.1.222:4006/api/v1notify_transfer"
         body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
         HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
+
+      "godfrey" ->
+          url = "http://192.168.1.222:4006/api/v1notify_transfer"
+          body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
+          HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
     end
-    #url = "http://192.168.1.222:4003/api/notify_transfer"
 
-    #body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
-
-    # Use your preferred HTTP client to send the request
-    #HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
   end
 
 
