@@ -84,11 +84,11 @@ defmodule TsbankWeb.TransactionController do
     account_map = Map.from_struct(account)
 
 
-
     if Map.get(account_map, :balance) >= amount do
       Accounts.update_account(%Account{} = account, %{balance: account.balance - amount})
       sender_details = %{sender_bank_name: "sipho", sender_account_num: Map.get(account_map, :accountNumber)}
-      send_notification_to_project_b(bank_name, sender_details, destination_account_num, amount)
+
+      send_notification_to_project_b(bank_name, sender_details,  destination_account_num, amount)
       conn
         |> put_status(:ok)
         |> json(%{message: "Transfer successful"})
@@ -100,29 +100,27 @@ defmodule TsbankWeb.TransactionController do
   end
 
   defp send_notification_to_project_b(bank_name, sender_details, destination_account_num, amount) do
-    # Use HTTPoison or another HTTP client to make a POST request to Project B
-    # sender_bank_name = Map.get(sender_details, sender_bank_name)
-    # sender_acc_num = Map.get(sender_details, sender_account_num)
-    IO.inspect(sender_details)
+
+
     case bank_name do
       "hata" ->
         url = "http://192.168.1.222:4003/api/v1/notify_transfer"
-        body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
+        body = %{bank_name: bank_name, sender_details: sender_details, amount: amount, destination_account_num: destination_account_num}
         HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
 
       "kevin" ->
-        url = "http://192.168.1.222:4005/api/v1notify_transfer"
-        body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
+        url = "http://192.168.1.222:4005/api/v1/notify_transfer"
+        body = %{bank_name: bank_name, sender_details: sender_details, amount: amount, destination_account_num: destination_account_num}
         HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
 
       "sami" ->
-        url = "http://192.168.1.222:4006/api/v1notify_transfer"
-        body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
+        url = "http://192.168.1.222:4006/api/v1/notify_transfer"
+        body = %{bank_name: bank_name, sender_details: sender_details, amount: amount, destination_account_num: destination_account_num}
         HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
 
       "godfrey" ->
-          url = "http://192.168.1.222:4006/api/v1notify_transfer"
-          body = %{bank_name: bank_name, amount: amount, destination_account_num: destination_account_num}
+          url = "http://192.168.1.222:4006/api/v1/notify_transfer"
+          body = %{bank_name: bank_name, sender_details: sender_details, amount: amount, destination_account_num: destination_account_num}
           HTTPoison.post(url, Poison.encode!(body), [{"Content-Type", "application/json"}])
     end
 
@@ -132,8 +130,12 @@ defmodule TsbankWeb.TransactionController do
   def notify_transfer(conn, %{"amount" => amount, "destination_account_num" => destination_account_num}) do
     # Perform the necessary actions on Project B, such as updating balances
 
-    IO.inspect(amount)
-    IO.inspect(destination_account_num)
+    acc_struct = Accounts.get_num_acc(destination_account_num)
+    acc = Map.from_struct(acc_struct)
+
+    _accBalanace = Map.get(acc, :balance)
+
+    Accounts.update_account(%Account{} = acc_struct, %{balance: acc_struct.balance + amount})
 
     conn
     |> put_status(:ok)

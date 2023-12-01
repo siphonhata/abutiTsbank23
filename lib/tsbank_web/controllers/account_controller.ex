@@ -16,31 +16,42 @@ defmodule TsbankWeb.AccountController do
   def create(conn, %{"account" => account_params}) do
 
     cust_id = Guardian.get_me_id(conn.assigns.user.user_id)
-    custom = Users.get_customer_user(cust_id) #returns a customer
+    custom = Users.get_customer_user(cust_id) # returns a customer
     accounts = Accounts.get_customer_accounts_by_id(cust_id)
-    IO.inspect(accounts)
-    accounts_as_maps = Enum.map(accounts, &Map.from_struct/1)
-    types_list = Enum.map(accounts_as_maps, &(&1.type))
+
+    account_types = ["savings", "fixed", "credit", "cheque"]
     target_value = Map.get(account_params, "type")
-    Enum.each(types_list, fn vall ->
-      if vall == target_value do
-        raise ErrorResponse.Unauthorized, message: "Account Type Exists"
-      else
-        account_types = ["fixed", "savings", "cheque"]
-        Enum.each(account_types, fn val ->
-          if val == target_value do
-            account_params = Map.put(account_params, "dateOpened", DateTime.utc_now)
-            with {:ok, %Account{} = account} <- Accounts.create_account(custom, account_params) do
-              conn
-                |> put_status(:created)
-                |> render(:show, account: account)
-            end
-          else
-            raise ErrorResponse.Unauthorized, message: "Invalid Account Type"
+
+    case {accounts, target_value} do
+      {[], _} ->
+        if Enum.member?(account_types, target_value) do
+          account_params = Map.put(account_params, "dateOpened", DateTime.utc_now)
+          with {:ok, %Account{} = account} <- Accounts.create_account(custom, account_params) do
+            conn
+            |> put_status(:created)
+            |> render(:show, account: account)
           end
-        end)
-      end
+        else
+          raise ErrorResponse.Unauthorized, message: "Invalid Account Type"
+        end
+
+      {existing_account_types, target_value}  ->
+              IO.inspect(existing_account_types)
+              Enum.each(existing_account_types, fn val ->
+              if val.type == target_value do
+                conn
+                  |> put_status(:unprocessable_entity)
+                  |> render(:error, message: "Customer already has an existing account with account type #{target_value}")
+              else
+                with {:ok, %Account{} = account} <- Accounts.create_account(custom, account_params) do
+                  conn
+                  |> put_status(:created)
+                  |> render(:show, account: account)
+                end
+
+        end
     end)
+    end
 
   end
 

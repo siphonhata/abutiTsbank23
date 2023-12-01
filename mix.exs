@@ -48,7 +48,8 @@ defmodule Tsbank.MixProject do
       {:telemetry, "~> 1.0"},
       {:ex_doc, "~> 0.19"},
       {:httpoison, "~> 1.8"},
-      {:poison, "~> 5.0"}
+      {:poison, "~> 5.0"},
+      {:ecto_psql_extras, "~> 0.7.14"}
     ]
   end
 
